@@ -2,6 +2,14 @@ int latchPin = 8;
 int clockPin = 12;
 int dataPin = 11;
 
+int trigPin = 4;    // Trigger
+int echoPin = 5;    // Echo
+
+int numberOfLED;
+
+long distanceOfCM; // distance in unit cm
+long duration; // original return value of distance sensor
+
 int numOfRegisters = 2;
 byte* registerState;
 
@@ -11,7 +19,12 @@ long effectRepeat = 0;
 long effectSpeed = 30;
 
 void setup() {
-  //Initialize array
+  Serial.begin (9600);
+  //Define inputs and outputs
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);// this part for distance sensor
+
+  //Initialize array, this part for LED control
   registerState = new byte[numOfRegisters];
   for (size_t i = 0; i < numOfRegisters; i++) {
     registerState[i] = 0;
@@ -21,133 +34,53 @@ void setup() {
   pinMode(latchPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
   pinMode(dataPin, OUTPUT);
+
+  for (int i = 0; i < 16; i++) {
+    regWrite(i, LOW);
+  }
 }
 
 void loop() {
-  /*do {
-    effectId = random(6);
-  } while (effectId == prevEffect);
-  prevEffect = effectId; 
-
-  /*switch (effectId)
-  {
-    case 0:
-      effectRepeat = random(1, 2);
-      break;
-    case 1:
-      effectRepeat = random(1, 2);
-      break;
-    case 3:
-      effectRepeat = random(1, 5);
-      break;
-    case 4:
-      effectRepeat = random(1, 2);
-      break;
-    case 5:
-      effectRepeat = random(1, 2);
-      break;
-  }
-
-  //set a constant effectRepeat to test
-  effectRepeat = 3;
-  for (int i = 0; i < effectRepeat; i++) {
-    //effectSpeed = random(10, 90); // set a constant speed to test
-    effectSpeed = 30;
-
-    switch (effectId)
-    {
-      case 0:
-        effectA(effectSpeed);
-        break;
-      case 1:
-        effectB(effectSpeed);
-        break;
-      case 3:
-        effectC(effectSpeed);
-        break;
-      case 4:
-        effectD(effectSpeed);
-        break;
-      case 6:
-        effectE(effectSpeed);
-        break;
-    }
-  }*/
+  distanceOfCM = getDistance();//get distance in unit cm
+  LEDControl(distanceOfCM);
 }
 
-void effectA(int speed) {
-  for (int i = 0; i < 16; i++) {
-    for (int k = i; k < 16; k++) {
-      regWrite(k, HIGH);
-      delay(speed);
-      regWrite(k, LOW);
-    }
-
-    regWrite(i, HIGH);
-  }
+long getDistance()
+{
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(5);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+ 
+  // Read the signal from the sensor: a HIGH pulse whose
+  // duration is the time (in microseconds) from the sending
+  // of the ping to the reception of its echo off of an object.
+  pinMode(echoPin, INPUT);
+  duration = pulseIn(echoPin, HIGH);
+ 
+  // Convert the time into a distance
+  long cm = (duration/2) / 29.1;     // Divide by 29.1 or multiply by 0.0343
+  return cm;
 }
 
-void effectB(int speed) {
-  for (int i = 15; i >= 0; i--) {
-    for (int k = 0; k < i; k++) {
-      regWrite(k, HIGH);
-      delay(speed);
-      regWrite(k, LOW);
+void LEDControl(int distanceOfCM)
+{
+  //need a function to get distance in unit cm
+  if (distanceOfCM > 74) {
+    for (int i = 0; i < 16; i++) {
+      regWrite(i, HIGH);
     }
-
-    regWrite(i, HIGH);
-  }
-}
-
-void effectC(int speed) {
-  int prevI = 0;
-  for (int i = 0; i < 16; i++) {
-    regWrite(prevI, LOW);
-    regWrite(i, HIGH);
-    prevI = i;
-
-    delay(speed);
   }
 
-  for (int i = 15; i >= 0; i--) {
-    regWrite(prevI, LOW);
-    regWrite(i, HIGH);
-    prevI = i;
-
-    delay(speed);
-  }
-}
-
-void effectD(int speed) {
-  for (int i = 0; i < 8; i++) {
-    for (int k = i; k < 8; k++)
-    {
-      regWrite(k, HIGH);
-      regWrite(15 - k, HIGH);
-      delay(speed);
-      regWrite(k, LOW);
-      regWrite(15 - k, LOW);
-    }
-
-    regWrite(i, HIGH);
-    regWrite(15 - i, HIGH);
-  }
-}
-
-void effectE(int speed) {
-  for (int i = 7; i >= 0; i--) {
-    for (int k = 0; k <= i; k++)
-    {
-      regWrite(k, HIGH);
-      regWrite(15 - k, HIGH);
-      delay(speed);
-      regWrite(k, LOW);
-      regWrite(15 - k, LOW);
-    }
-
-    regWrite(i, HIGH);
-    regWrite(15 - i, HIGH);
-  }
+  // linear equation between LED pin number and distance. Detecting distance range between 20cm to 52cm
+  numberOfLED = (distanceOfCM - 10) / 4;
+  for (int j = 0; j < numberOfLED; j++) {
+    regWrite(j, HIGH);
+  }//turn on LED from number 0 to parameter "numberOfLED"
+  for (int k = numberOfLED; k < 16; ++k) {
+    regWrite(k, LOW);
+  }//turn off LED from parameter "numberOfLED" to 16
 }
 
 void regWrite(int pin, bool state) {
