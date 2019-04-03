@@ -1,5 +1,7 @@
 # CarParkingSystem
 
+Our goal is to use lighting number of LEDs to show distance between objects.
+
 1) Use distance sensor HC-HR04 to detect distance. 
 2) Short distance means less lighting LED, long distance means more lighting LED.
 3) Detecting distance from 10cm to 74cm, corresponding to 16 LEDs.
